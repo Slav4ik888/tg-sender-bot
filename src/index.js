@@ -1,31 +1,51 @@
-import './utils/dotenv.js';
 import { Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { code } from 'telegraf/format';
-import { transforming } from './utils/transforming.js';
+import { broadcast, parseUsernames } from './utils/index.js';
+
+
 
 
 console.log('env: ', process.env.NODE_ENV);
+const SUBSCRIBERS = parseUsernames(process.env.SUBSCRIBERS);
+console.log('SUBSCRIBERS: ', SUBSCRIBERS);
+const ADMIN_ID = Number(process.env.ADMIN_ID);
+const MESSAGE = 'Hello, it is a message from Rhythm!';
 
 
 const bot = new Telegraf(process.env.TELEGRAMM_BOT_TOKEN);
 
 
 bot.command('start', async (ctx) => {
-  await ctx.reply('Пришлите голосовое сообщение и я переведу его в текст');
+  await ctx.reply('Pressed start');
+});
+
+bot.command('send_all', async (ctx) => {
+  try {
+    if (ctx.from.id !== ADMIN_ID) return ctx.reply('❌ Эта команда доступна только админу');;
+
+    if (!MESSAGE) return ctx.reply('❌ Укажите сообщение для рассылки');
+
+    await ctx.reply('Start broadcast...');
+
+    const result = await broadcast(bot, SUBSCRIBERS, MESSAGE);
+    console.log('result: ', result);
+
+    await ctx.reply('Ended broadcast', result);
+  }
+  catch (e) {
+    console.log('Error send_all: ', e.message);
+    await ctx.reply(e.message);
+  }
 });
 
 
-bot.on(message('audio'), async (ctx) => {
-  
+bot.on(message('text'), async (ctx) => {
   try {
-    await ctx.reply(code('Audio cообщение принял, обрабатываю...'))
+    await ctx.reply(code('Cообщение принял, обрабатываю...'))
     // await ctx.reply(JSON.stringify(ctx.update.message, null, 2));
-    const link = await ctx.telegram.getFileLink(ctx.update.message.audio.file_id);
 
-    await transforming(ctx, ctx.update.message.audio, link);
-
-    await ctx.reply(text);
+    await ctx.reply('Типо обработал.');
   }
   catch (e) {
     console.log('Error in audio message: ', e.message);
@@ -34,28 +54,19 @@ bot.on(message('audio'), async (ctx) => {
 });
 
 
-bot.on(message('voice'), async (ctx) => {
-  try {
-    await ctx.reply(code('Voice cообщение принял, обрабатываю...'))
-    // await ctx.reply(JSON.stringify(ctx.message.voice, null, 2));
-    const link = await ctx.telegram.getFileLink(ctx.message.voice.file_id);
-    
-    await transforming(ctx, ctx.message.voice, link);
-
-    await ctx.reply(code('Обработка завершена.'));
-  }
-  catch (e) {
-    console.log('Error in voice message: ', e.message);
-    await ctx.reply(e.message);
-  }
+// Обработка ошибок
+bot.catch((err, ctx) => {
+  console.error(`Error for ${ctx.updateType}:`, err);
 });
 
-
-bot.launch();
+// Запуск бота
+bot.launch().then(() => {
+  console.log('Sender bot started!');
+});
 
 // =================================================
 
-console.log(`Starting Voice_to_text_bot...`);
+console.log(`Starting tg-sender-bot...`);
 
 process.once('SIGINT', () => {
   console.log('[SIGINT] stop bot!');
@@ -68,5 +79,5 @@ process.once('SIGTERM', () => {
 });
 
 
-// t.me/voice_to_text_slv4ik888_bot
-// git add . && git commit -m "2024-01-06" && git push -u origin main
+// t.me/Rhythm_panel_bot
+// git add . && git commit -m "2025-10-23" && git push -u origin main
